@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عرض تقديمي احترافي عن Prompting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- متغيرات CSS --- */
+        :root {
+            --font-family-base: 'Cairo', sans-serif;
+            --color-background: #f0f2f5;
+            --color-container-bg: #ffffff;
+            --color-text-primary: #1f2937; /* gray-800 */
+            --color-text-secondary: #374151; /* gray-700 */
+            --color-text-muted: #6b7280; /* gray-500 */
+            --color-accent: #3b82f6; /* blue-500 */
+            --color-accent-hover: #2563eb; /* blue-600 */
+            --color-border: #e5e7eb; /* gray-200 */
+            --border-radius-md: 0.5rem;
+            --border-radius-lg: 0.75rem;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --transition-fast: 0.2s ease;
+            --transition-base: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
+        /* --- الأساسيات --- */
+        body {
+            font-family: var(--font-family-base);
+            transition: background-color var(--transition-slow);
+            background-color: var(--color-background);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+            box-sizing: border-box;
+            color: var(--color-text-secondary);
+        }
+
+        #presentation-container {
+            width: 100%;
+            max-width: 1024px;
+            background-color: var(--color-container-bg);
+            box-shadow: var(--shadow-lg);
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 2rem); /* اجعل الحاوية تملأ معظم ارتفاع الشاشة مع مراعاة الحشوة */
+            max-height: 900px;
+        }
+
+        /* --- شريط التنقل العلوي --- */
+        #top-bar {
+            background-color: rgba(255, 255, 255, 0.9); /* خلفية بيضاء شبه شفافة */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px); /* For Safari */
+            border-bottom: 1px solid var(--color-border);
+            position: sticky; 
+            top: 0;
+            z-index: 50;
+        }
+        #top-bar button, #top-bar a {
+            font-size: 0.9rem;
+            transition: color var(--transition-fast), background-color var(--transition-fast);
+        }
+        #top-bar button:focus-visible, #top-bar a:focus-visible {
+            outline: 2px solid var(--color-accent);
+            outline-offset: 2px;
+        }
+
+        #dropdown-nav-menu a {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #dropdown-nav-menu a:hover, #dropdown-nav-menu a:focus {
+            background-color: var(--color-accent);
+            color: white;
+        }
+        #dropdown-nav-menu a[aria-current="true"] {
+            background-color: var(--color-accent-hover);
+            color: white;
+            font-weight: 600;
+        }
+
+
+        /* --- منطقة عرض الشرائح --- */
+        #slides-wrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            display: none;
+            flex-direction: column;
+            align-items: flex-start; /* Default for LTR, in RTL this means right alignment */
+            justify-content: flex-start;
+            padding: 1.5rem 2rem;
+            animation: fadeIn 0.4s ease-out;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .slide.active {
+            display: flex !important;
+        }
+        .slide-content {
+            width: 100%;
+            text-align: right; /* Default for Arabic text */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- شريط التنقل السفلي --- */
+        #navigation-bar {
+            border-top: 1px solid var(--color-border);
+            background-color: #f9fafb; /* Light gray for bottom bar */
+        }
+        .nav-button {
+            background-color: var(--color-accent);
+            color: white;
+            padding: 0.75rem 1.75rem;
+            border: none;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color var(--transition-fast), transform 0.15s ease, box-shadow var(--transition-fast);
+            box-shadow: var(--shadow-md);
+        }
+        .nav-button:hover:not(:disabled) {
+            background-color: var(--color-accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px -1px rgba(0,0,0,0.12), 0 4px 6px -1px rgba(0,0,0,0.08);
+        }
+        .nav-button:disabled {
+            background-color: #9ca3af; /* gray-400 */
+            cursor: not-allowed;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .nav-button:focus-visible {
+            outline: 2px solid var(--color-accent-hover);
+            outline-offset: 2px;
+        }
+
+
+        /* --- رسالة الخطأ --- */
+        .error-message-box {
+            position: fixed;
+            top: 80px; /* Below top bar */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #fef2f2; /* red-50 */
+            border: 1px solid #fca5a5; /* red-300 */
+            color: #b91c1c; /* red-700 */
+            padding: 1rem 1.25rem;
+            border-radius: var(--border-radius-md);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000; /* فوق كل شيء */
+            display: none;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        /* --- قائمة الفهرس في الشريحة الأولى (MODIFIED) --- */
+        .prompt-list {
+            list-style-type: none;
+            padding-right: 0;
+        }
+        .prompt-list li {
+            background-color: #f8fafc; /* slate-50 */
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-md);
+            margin-bottom: 0.85rem;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+            text-align: right; /* Ensure text within li is right-aligned for Arabic */
+        }
+        .prompt-list li:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--color-accent);
+        }
+        .prompt-link {
+            display: block;
+            padding: 0.85rem 1.25rem;
+            color: var(--color-accent);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: none; /* Remove old style */
+            transition: color var(--transition-fast), background-color var(--transition-fast);
+            border-radius: var(--border-radius-md); /* Match li's border-radius for focus outline */
+        }
+        .prompt-link:hover, .prompt-link:focus { 
+            color: var(--color-accent-hover);
+            background-color: transparent;
+            border-bottom-color: transparent;
+            outline: none;
+        }
+        .prompt-link:focus-visible {
+            outline: 2px solid var(--color-accent-hover);
+            outline-offset: 2px;
+        }
+
+
+        /* --- تنسيقات عامة لمحتوى الشرائح --- */
+        .slide-content > h1:first-child, 
+        .slide-content > h2:first-child { 
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.25rem; 
+            line-height: 2.75rem; 
+            font-weight: 700;
+            color: var(--color-text-primary);
+        }
+         .slide-content > h1.text-5xl { /* Specific for title page large H1 */
+            font-size: 2.75rem;
+            line-height: 1.2;
+             margin-bottom: 1rem;
+        }
+        @media (min-width: 768px) {
+             .slide-content > h1.text-5xl {
+                font-size: 3.75rem;
+            }
+        }
+
+        .slide-content > h3 { 
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.5rem;
+            line-height: 2rem;
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+        .slide-content p, .slide-content ul, .slide-content ol {
+            font-size: 1.05rem;
+            line-height: 1.75;
+            color: var(--color-text-secondary);
+            margin-bottom: 1rem;
+        }
+        .slide-content ul, .slide-content ol {
+            padding-right: 1.25rem; /* For RTL lists */
+        }
+        .slide-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* --- كتل الأمثلة والملاحظات --- */
+        .example-block {
+            background-color: var(--color-container-bg);
+            border: 1px solid var(--color-border);
+            border-right-width: 5px; 
+            padding: 1.25rem;
+            border-radius: var(--border-radius-md);
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+        }
+        .example-block strong {
+            font-weight: 700;
+            color: #1e3a8a; 
+        }
+        /* MODIFIED: <pre> styling for direction */
+        .example-block pre,
+        .sub-example-block pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Cairo', Consolas, 'Courier New', monospace;
+            font-size: 0.95rem;
+            background-color: #f9fafb; /* gray-50 */
+            padding: 1rem;
+            border-radius: 0.375rem;
+            overflow-x: auto;
+            border: 1px solid #f3f4f6; /* gray-100 */
+            direction: inherit; /* Inherit from parent, typically RTL for Arabic content */
+            text-align: inherit; /* Inherit from parent, typically right for Arabic content */
+        }
+        /* ADDED: Specific class for LTR preformatted content (e.g., code, logs) */
+        .example-block pre.ltr-code,
+        .sub-example-block pre.ltr-code {
+            direction: ltr;
+            text-align: left;
+        }
+
+        .example-block.border-blue-500 { border-right-color: #3b82f6; }
+        .example-block.border-green-500 { border-right-color: #22c55e; }
+        .example-block.border-emerald-500 { border-right-color: #10b981; }
+        .example-block.border-rose-500 { border-right-color: #f43f5e; }
+        .example-block.border-violet-500 { border-right-color: #8b5cf6; }
+        .example-block.border-lime-500 { border-right-color: #84cc16; }
+        .example-block.border-orange-500 { border-right-color: #f97316; }
+        .example-block.border-amber-500 { border-right-color: #f59e0b; }
+        .example-block.border-pink-500 { border-right-color: #ec4899; }
+        .example-block.border-fuchsia-500 { border-right-color: #d946ef; }
+        .example-block.border-teal-500 { border-right-color: #14b8a6; }
+        .example-block.border-cyan-500 { border-right-color: #06b6d4; }
+        .example-block.border-indigo-500 { border-right-color: #6366f1; }
+        .example-block.border-purple-500 { border-right-color: #a855f7; }
+        .example-block.border-red-500 { border-right-color: #ef4444; }
+        .example-block.border-sky-500 { border-right-color: #0ea5e9; }
+        .example-block.border-slate-500 { border-right-color: #64748b; }
+        
+        .context-block    { background-color: #fefce8; border-right-color: #eab308; color: #854d0e; }
+        .step-back-block  { background-color: #f5f3ff; border-right-color: #7c3aed; color: #5b21b6; }
+        .note-block       { background-color: #fffbeb; border-right-color: #f59e0b; color: #b45309; }
+        .explanation-block{ background-color: #f0f9ff; border-right-color: #0ea5e9; color: #0369a1; }
+
+        .note-block strong, .explanation-block strong { font-weight: 700; }
+        .note-block strong { color: #92400e; }
+        .explanation-block strong { color: #0c4a6e; }
+        .explanation-block ul, .explanation-block ol { list-style-position: inside; padding-right: 0; }
+        .explanation-block li { margin-bottom: 0.75rem; }
+
+
+        /* --- الخريطة الذهنية --- */
+        .mindmap-container { display: flex; flex-direction: column; align-items: center; padding: 1.5rem 0; position: relative; }
+        .mindmap-center { background-image: linear-gradient(to right, #60a5fa, var(--color-accent)); color: white; padding: 1rem 1.75rem; border-radius: 1rem; font-size: 1.5rem; font-weight: 700; margin-bottom: 2.5rem; box-shadow: 0 6px 15px rgba(59, 130, 246, 0.3); text-align: center; }
+        .mindmap-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; width: 100%; max-width: 900px; }
+        .mindmap-branch { background-color: var(--color-container-bg); border: 1px solid var(--color-border); padding: 1.25rem; border-radius: var(--border-radius-lg); text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06); transition: transform var(--transition-fast), box-shadow var(--transition-fast); }
+        .mindmap-branch:hover { transform: translateY(-4px); box-shadow: 0 6px 12px rgba(0,0,0,0.1); }
+        .mindmap-branch img { width: 56px; height: 56px; margin-bottom: 0.75rem; border-radius: 50%; object-fit: cover; background-color: #f3f4f6; padding: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.07); }
+        .mindmap-branch p { font-size: 1.05rem; font-weight: 600; margin-top: 0.25rem; }
+        
+        .mindmap-branch.branch-green { border-color: #22c55e !important; } .mindmap-branch.branch-green .text-green-700 { color: #15803d !important; } .mindmap-branch.branch-green img { background-color: #dcfce7; }
+        .mindmap-branch.branch-blue { border-color: #3b82f6 !important; } .mindmap-branch.branch-blue .text-blue-700 { color: #1d4ed8 !important; } .mindmap-branch.branch-blue img { background-color: #dbeafe; }
+        .mindmap-branch.branch-yellow { border-color: #eab308 !important; } .mindmap-branch.branch-yellow .text-yellow-700 { color: #a16207 !important; } .mindmap-branch.branch-yellow img { background-color: #fef9c3; }
+        .mindmap-branch.branch-purple { border-color: #a855f7 !important; } .mindmap-branch.branch-purple .text-purple-700 { color: #7e22ce !important; } .mindmap-branch.branch-purple img { background-color: #f3e8ff; }
+        .mindmap-branch.branch-red { border-color: #ef4444 !important; } .mindmap-branch.branch-red .text-red-700 { color: #b91c1c !important; } .mindmap-branch.branch-red img { background-color: #fee2e2; }
+        .mindmap-branch.branch-indigo { border-color: #6366f1 !important; } .mindmap-branch.branch-indigo .text-indigo-700 { color: #4338ca !important; } .mindmap-branch.branch-indigo img { background-color: #e0e7ff; }
+        .mindmap-branch.branch-pink { border-color: #ec4899 !important; } .mindmap-branch.branch-pink .text-pink-700 { color: #be185d !important; } .mindmap-branch.branch-pink img { background-color: #fce7f3; }
+
+
+        /* --- أمثلة فرعية (مثل Step-back) --- */
+        .sub-example-block {
+            background-color: #f8fafc; /* slate-50 */
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: var(--border-radius-md);
+            padding: 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03);
+        }
+        .sub-example-block h4 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #334155; /* slate-700 */
+            margin-bottom: 0.75rem;
+        }
+        .sub-example-block p {
+            margin-bottom: 0.5rem;
+            color: #475569; /* slate-600 */
+            font-size: 1rem;
+        }
+        .sub-example-block strong {
+            color: #1e293b; /* slate-800 */
+        }
+        .sub-example-block .step-block {
+            background-color: #eff6ff; /* blue-50 */
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-top: 0.75rem;
+            /* Border will be on the right for RTL due to [dir="rtl"] rule below */
+        }
+        [dir="rtl"] .sub-example-block .step-block {
+            border-left: none;
+            border-right: 3px solid #60a5fa; /* blue-400 */
+        }
+        [dir="rtl"] .example-block { 
+             border-left-width: 1px; /* Keep the other side of the border consistent */
+             border-right-width: 5px; /* Ensure main emphasis is on the right */
+        }
+    </style>
+</head>
+<body>
+
+    <main id="presentation-container" aria-label="عرض تقديمي عن فن التلقين">
+        <nav id="top-bar" class="p-3 flex justify-between items-center" aria-label="شريط التنقل العلوي">
+            <div class="relative" id="dropdown-nav-container">
+                <button id="dropdown-nav-toggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="dropdown-nav-menu" class="flex items-center text-slate-700 hover:text-blue-600 focus:outline-none font-medium px-3 py-2 rounded-md hover:bg-slate-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <span>فهرس الشرائح</span>
+                </button>
+                <div id="dropdown-nav-menu" class="absolute right-0 mt-2 w-72 max-h-80 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg py-1 z-[60] hidden" role="menu" aria-orientation="vertical" aria-labelledby="dropdown-nav-toggle">
+                    </div>
+            </div>
+
+            <button id="homeBtn" type="button" class="flex items-center text-slate-700 hover:text-blue-600 focus:outline-none font-medium px-3 py-2 rounded-md hover:bg-slate-100 transition-colors hidden" title="العودة للشريحة الرئيسية">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                <span>الصفحة الرئيسية</span>
+            </button>
+        </nav>
+
+        <div id="custom-error-box" class="error-message-box" role="alert" aria-live="assertive" aria-hidden="true">
+            <p id="custom-error-message"></p>
+        </div>
+
+        <div id="slides-wrapper" role="region" aria-label="محتوى الشرائح">
+            <article class="slide active" id="slide1" aria-labelledby="slide1-title">
+                <div class="slide-content flex flex-col items-center justify-center text-center h-full">
+                    <div>
+                        <h1 id="slide1-title" class="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-4 pb-2">
+                            فن التلقين (Prompting)
+                        </h1>
+                        <h2 class="text-2xl md:text-3xl font-semibold text-slate-700 mb-6">تقنيات التلقين العامة للنماذج اللغوية</h2>
+                        
+                        <!-- ADDED: Personal Info -->
+                        <div class="my-8 text-center">
+                            <p class="text-xl font-bold text-slate-800">إسلام محمد</p>
+                            <p class="text-lg text-slate-600">eslam.mohamed@nagwa.com</p>
+                        </div>
+                        
+                        <div class="max-w-lg mx-auto text-lg">
+                            <p class="mb-8 text-slate-600">اختر تقنية من القائمة أدناه أو استخدم القائمة المنسدلة في الأعلى للتنقل.</p>
+                            <ul class="prompt-list" role="list">
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide2">Zero-shot Prompting (التلقين المباشر)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-one-shot">One-shot Prompting (التلقين بمثال واحد)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-few-shot">Few-shot Prompting (التلقين بأمثلة قليلة)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-system">System Prompting (التلقين النظامي)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-contextual">Contextual Prompting (التلقين السياقي)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-role">Role Prompting (التلقين بالأدوار)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-step-back">Step-back Prompting (التلقين بالخطوة للخلف)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-cot">Chain of Thought (CoT) (سلسلة الأفكار)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-self-consistency">Self-consistency (الاتساق الذاتي)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-tot">Tree of Thoughts (ToT) (شجرة الأفكار)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-react">ReAct (Reason & Act) (الاستدلال والفعل)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-ape">Automatic Prompt Engineering (APE)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-code-prompting">Code Prompting (تلقين الكود)</a></li>
+                                <li><a href="#" class="prompt-link" data-target-slide-id="slide-multimodal">Multimodal Prompting (التلقين متعدد الوسائط)</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide2" aria-labelledby="slide2-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide2-title" class="text-teal-600">Zero-shot Prompting (التلقين المباشر)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>إعطاء النموذج المهمة مباشرة دون أي أمثلة للإجابة المطلوبة، معتمدًا على فهمه العام للمهام.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تطلب من طالب (النموذج) حل مسألة جديدة تمامًا لم يرَ مثلها، معتمدًا فقط على فهمه للمفاهيم الأساسية.</p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="p-4 bg-sky-50 rounded-lg shadow-sm border-r-4 border-sky-400">
+                            <h4 class="text-lg md:text-xl font-semibold text-sky-800 mb-2">مثال (علوم - ابتدائي):</h4>
+                            <p class="text-slate-700 text-md"><strong class="font-medium text-sky-900">الموجه:</strong> "اشرح ببساطة كيف تحدث عملية التمثيل الضوئي."</p>
+                            <p class="text-slate-600 text-sm mt-1 italic"><strong class="font-medium">الناتج المتوقع:</strong> شرح أساسي للعملية.</p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-lg shadow-sm border-r-4 border-amber-400">
+                            <h4 class="text-lg md:text-xl font-semibold text-amber-800 mb-2">مثال (تاريخ - ثانوي):</h4>
+                            <p class="text-slate-700 text-md"><strong class="font-medium text-amber-900">الموجه:</strong> "لخص أهم أسباب قيام الحرب العالمية الأولى في 3 نقاط."</p>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1">
+                            <li>توليد تعريفات أولية: "عرّف مصطلح 'الديمقراطية'."</li>
+                            <li>طرح أسئلة مفتوحة بسيطة: "ما هي عاصمة فرنسا؟"</li>
+                            <li>تلخيص سريع لمفهوم معروف.</li>
+                            <li>كتابة مسودات أولية لمحتوى بسيط.</li>
+                        </ul>
+                    </div>
+                    <div class="note-block">
+                        <p><strong>ملاحظة:</strong> هذه التقنية هي الأسهل، لكنها قد لا تعطي دائمًا النتائج الأكثر دقة أو التنسيق المطلوب، خاصة للمهام المعقدة.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide3" aria-labelledby="slide3-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide3-title" class="text-cyan-600">استخدامات Zero-shot Prompting (خريطة ذهنية)</h2>
+                    <div class="mindmap-container">
+                        <div class="mindmap-center">استخدامات Zero-shot</div>
+                        <div class="mindmap-branches">
+                            <div class="mindmap-branch branch-green">
+                                <img src="https://placehold.co/64x64/22C55E/FFFFFF?text=❓" alt="أيقونة سؤال" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-green-700">الإجابة على سؤال مباشر</p>
+                            </div>
+                            <div class="mindmap-branch branch-blue">
+                                <img src="https://placehold.co/64x64/3B82F6/FFFFFF?text=📄" alt="أيقونة تلخيص" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-blue-700">تلخيص نص</p>
+                            </div>
+                            <div class="mindmap-branch branch-yellow">
+                                <img src="https://placehold.co/64x64/EAB308/FFFFFF?text=🌍" alt="أيقونة ترجمة" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-yellow-700">ترجمة نص</p>
+                            </div>
+                            <div class="mindmap-branch branch-purple">
+                                <img src="https://placehold.co/64x64/A855F7/FFFFFF?text=💡" alt="أيقونة إبداع" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-purple-700">كتابة إبداعية (بداية قصة)</p>
+                            </div>
+                            <div class="mindmap-branch branch-red">
+                                <img src="https://placehold.co/64x64/EF4444/FFFFFF?text=🔍" alt="أيقونة بحث" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-red-700">استخراج معلومات محددة</p>
+                            </div>
+                            <div class="mindmap-branch branch-indigo">
+                                <img src="https://placehold.co/64x64/6366F1/FFFFFF?text=🏷️" alt="أيقونة تصنيف" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-indigo-700">تصنيف النصوص</p>
+                            </div>
+                            <div class="mindmap-branch branch-pink">
+                                <img src="https://placehold.co/64x64/EC4899/FFFFFF?text=✍️" alt="أيقونة إكمال" onerror="this.onerror=null;this.src='https://placehold.co/64x64/CCCCCC/FFFFFF?text=Err';this.alt='رمز خطأ التحميل';">
+                                <p class="text-pink-700">إكمال جمل أو فقرات</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-one-shot" aria-labelledby="slide-one-shot-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-one-shot-title" class="text-emerald-600">One-shot Prompting (التلقين بمثال واحد)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تقديم وصف المهمة بالإضافة إلى <strong>مثال واحد</strong> لكيفية الإجابة أو التنسيق المطلوب.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تشرح للطالب كيفية حل نوع معين من المسائل، ثم تعطيه مثالاً واحدًا محلولاً ليسترشد به.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (لغة عربية - مفردات):</h3>
+                        <div class="example-block border-emerald-500">
+                            <pre><strong>الموجه:</strong>
+استخرج الكلمة التي تعبر عن الشعور بالسعادة من الجملة وقدم مرادفًا لها.
+
+<strong>مثال:</strong>
+الجملة: كان الطفل مسرورًا جدًا بالهدية.
+الكلمة: مسرورًا
+المرادف: فرحًا
+------------------------------------
+الجملة: شعرتُ بابتهاج عظيم عند سماع الخبر.
+الكلمة:
+المرادف:</pre>
+                        </div>
+                        <div class="example-block border-green-500 bg-green-50">
+                            <pre><strong>الناتج المتوقع:</strong>
+الكلمة: ابتهاج
+المرادف: غبطة (أو مرادف مناسب آخر)</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1">
+                            <li>لتوضيح تنسيق معين للإجابة (سؤال وجواب، مصطلح وتعريفه).</li>
+                            <li>لتوجيه النموذج نحو نوع معين من التحليل أو الاستخراج.</li>
+                            <li>لتعليم النموذج أسلوبًا أو نبرة معينة (بشكل بسيط).</li>
+                            <li>لتوليد أسئلة على نمط معين.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-few-shot" aria-labelledby="slide-few-shot-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-few-shot-title" class="text-rose-600">Few-shot Prompting (التلقين بأمثلة قليلة)</h2>
+                     <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تقديم وصف المهمة مع <strong>عدة أمثلة (2-5)</strong> توضح المدخلات والمخرجات المطلوبة.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تقدم للطالب عدة مسائل محلولة من نفس النوع، بأنماط مختلفة قليلاً، ليتعلم النمط العام بشكل أفضل.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (رياضيات - تصنيف أشكال):</h3>
+                        <div class="example-block border-rose-500">
+                            <pre><strong>الموجه:</strong>
+صنف الأشكال التالية:
+
+الشكل: له ثلاثة أضلاع.
+التصنيف: مثلث
+---
+الشكل: له أربعة أضلاع متساوية وزوايا قائمة.
+التصنيف: مربع
+---
+الشكل: ليس له أضلاع وهو مستدير.
+التصنيف: دائرة
+------------------------------------
+الشكل: له أربعة أضلاع، كل ضلعين متقابلين متساويين، وزواياه قائمة.
+التصنيف:</pre>
+                        </div>
+                        <div class="example-block border-green-500 bg-green-50">
+                            <pre><strong>الناتج المتوقع:</strong>
+التصنيف: مستطيل</pre>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1">
+                            <li>للمهام التي تتطلب فهم نمط أكثر تعقيدًا.</li>
+                            <li>عند الحاجة لدقة أعلى أو تنسيق محدد جدًا.</li>
+                            <li>لتدريب النموذج على تصنيفات معينة.</li>
+                            <li>لتوليد أمثلة متنوعة لمفهوم معين.</li>
+                        </ul>
+                    </div>
+                     <div class="note-block">
+                        <p><strong>ملاحظة مهمة:</strong> عند استخدامها لمهام التصنيف، من الجيد "خلط الفئات" في الأمثلة التي تقدمها حتى لا يعتمد النموذج على ترتيب الأمثلة فقط.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-system" aria-labelledby="slide-system-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-system-title" class="text-violet-600">System Prompting (التلقين النظامي)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تحديد "الدور" العام أو "الشخصية" التي يجب أن يتقمصها النموذج، أو السياق العام لعمله. إنها تعطي "الصورة الكبيرة".</p>
+                    </div>
+                     <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تقول للمساعد (النموذج): "أنت الآن ستعمل كـ <strong>معلم علوم خبير يشرح للأطفال</strong>" أو "أنت الآن <strong>مدقق لغوي صارم</strong>."</p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="example-block border-violet-500">
+                             <h4 class="text-lg font-semibold text-violet-700 mb-2">مثال (أحياء):</h4>
+                            <pre><strong>الموجه:</strong>
+أنت عالم أحياء بحرية متحمس. اشرح أهمية الشعاب المرجانية بطريقة شيقة لطفل في العاشرة.</pre>
+                             <p class="text-slate-600 text-sm mt-2 italic"><strong>الناتج المتوقع:</strong> شرح مبسط، بلغة مناسبة للأطفال، وبنبرة حماسية.</p>
+                        </div>
+                        <div class="example-block border-violet-500">
+                            <h4 class="text-lg font-semibold text-violet-700 mb-2">مثال (أسئلة اختبار):</h4>
+                            <pre><strong>الموجه:</strong>
+بصفتك واضع امتحانات لمادة الجغرافيا للإعدادية، صغ 3 أسئلة اختيار من متعدد حول تضاريس الوطن العربي، مع تحديد الإجابة الصحيحة.</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1">
+                            <li>لتحديد نبرة وأسلوب المحتوى (رسمي، مبسط، فكاهي، علمي دقيق).</li>
+                            <li>لتوجيه النموذج لإنتاج أنواع معينة من المحتوى (شرح، سؤال، قصة).</li>
+                            <li>لضمان تناسب المخرجات مع الجمهور المستهدف.</li>
+                            <li>لتحديد قيود معينة على الإخراج (مثلاً: "اشرح بدون مصطلحات تقنية معقدة").</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-system-example-geography" aria-labelledby="slide-system-example-geography-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-system-example-geography-title" class="text-lime-600">مثال تطبيقي لـ System Prompting (جغرافيا)</h2>
+                    <div class="mb-6">
+                        <h3>الهدف:</h3>
+                        <p>إنشاء فقرة تعريفية عن "نهر النيل" مناسبة لطلاب الصف الثاني الإعدادي، مع التركيز على نقاط محددة وباللغة العربية الفصحى.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الموجه (System Prompt):</h3>
+                        <div class="example-block border-lime-500">
+                            <pre>اكتب فقرة واحدة لا تزيد عن 50 كلمة عن نهر النيل لطلاب الصف الثاني الإعدادي. يجب أن تستخدم اللغة العربية الفصحى المبسطة. اذكر في الفقرة أنه أطول أنهار العالم وعدد الدول التي يمر بها في حوض النيل. لا تذكر تفاصيل عن السدود المقامة عليه.</pre>
+                        </div>
+                    </div>
+                    <div class="explanation-block">
+                        <h3>شرح لماذا هذا "System Prompting":</h3>
+                        <ol class="list-decimal space-y-1">
+                            <li><strong>المهمة الأساسية:</strong> كتابة فقرة عن نهر النيل.</li>
+                            <li><strong>تعليمات النظام (System Instructions):</strong>
+                                <ul class="list-disc mt-2 pr-5 space-y-1">
+                                    <li><strong>"فقرة واحدة (لا تزيد عن 50 كلمة)":</strong> تحديد الطول والتنسيق.</li>
+                                    <li><strong>"لطلاب الصف الثاني الإعدادي":</strong> تحديد الجمهور.</li>
+                                    <li><strong>"اللغة العربية الفصحى المبسطة":</strong> تحديد الأسلوب.</li>
+                                    <li><strong>"اذكر ... ولا تذكر ...":</strong> تحديد محتوى مطلوب ومستبعد.</li>
+                                </ul>
+                            </li>
+                        </ol>
+                        <p class="mt-4 text-md leading-relaxed">هنا، لم تطلب فقط كتابة الموضوع، بل أعطيت النموذج مجموعة من القواعد والمعايير التي يجب أن يلتزم بها. هذا هو جوهر "تلقين النظام".</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-contextual" aria-labelledby="slide-contextual-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-contextual-title" class="text-orange-600">Contextual Prompting (التلقين السياقي)</h2>
+                     <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>توفير معلومات أساسية أو تفاصيل محددة ذات صلة بالمهمة لمساعدة النموذج على فهم "سياق" الطلب بشكل أفضل.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك قبل أن تسأل الطالب سؤالاً معقدًا، تعطيه فقرة قصيرة أو حقائق "لتذكيره" بالمعلومات الأساسية التي سيحتاجها.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (دراسات اجتماعية - تاريخ):</h3>
+                        <div class="example-block border-orange-500">
+                            <div class="context-block">
+                                <p><strong>السياق:</strong> بعد انتهاء الحرب العالمية الثانية، انقسم العالم إلى معسكرين رئيسيين، شرقي وغربي، وبدأت فترة عرفت بالحرب الباردة.</p>
+                            </div>
+                            <pre><strong>السؤال:</strong> بناءً على السياق أعلاه، ما هي أبرز سمات فترة الحرب الباردة بين المعسكرين؟</pre>
+                        </div>
+                        <div class="example-block border-green-500 bg-green-50">
+                            <p><strong>الناتج المتوقع:</strong> إجابة تركز على التوتر الأيديولوجي، سباق التسلح، إلخ، بناءً على السياق المقدم.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1">
+                            <li>عند طرح أسئلة تحليلية أو استنتاجية.</li>
+                            <li>لربط مفاهيم جديدة بمعرفة سابقة.</li>
+                            <li>لتوجيه تركيز النموذج على جانب معين من الموضوع.</li>
+                            <li>لتوليد محتوى يبني على معلومات موجودة مسبقًا.</li>
+                            <li>لإنشاء تمارين "فهم المقروء".</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-contextual-example-grammar" aria-labelledby="slide-contextual-example-grammar-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-contextual-example-grammar-title" class="text-amber-600">مثال تطبيقي لـ Contextual Prompting (قواعد)</h2>
+                    <div class="mb-6">
+                        <h3>الهدف:</h3>
+                        <p>إنشاء أمثلة جمل لتوضيح قاعدة نحوية باستخدام مفردات من مجال معين.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الموجه (Prompt):</h3>
+                        <div class="example-block border-amber-500">
+                            <div class="context-block border-amber-400">
+                                <p><strong>السياق:</strong> أشرح قاعدة "جمع المذكر السالم" لطلاب الصف السادس. الدرس الحالي يركز على مفردات "المهن والحرف".</p>
+                            </div>
+                            <pre><strong>المطلوب:</strong> أنشئ 3 جمل مفيدة وواضحة تستخدم فيها جمع المذكر السالم لكلمات تدل على مهن أو حرف (مثل: معلم، مهندس، فلاح).</pre>
+                        </div>
+                    </div>
+                    <div class="explanation-block">
+                        <h3>لماذا هذا "تلقين سياقي"؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li><strong>"السياق: أشرح قاعدة ... متعلقة بـ 'المهن والحرف'"</strong> يحدد القاعدة النحوية والمجال الدلالي للمفردات.</li>
+                            <li>هذا السياق يضمن أن الأمثلة ستكون صحيحة نحوياً ومرتبطة بموضوع الدرس، مما يجعلها أكثر فعالية.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-role" aria-labelledby="slide-role-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-role-title" class="text-pink-600">Role Prompting (التلقين بالأدوار)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تعيين دور أو شخصية محددة للنموذج ليتبناها، مما يؤثر على أسلوبه، معرفته المفترضة، ونبرة إجاباته. (تداخل كبير مع System Prompting، لكنه يركز أكثر على "من يكون" النموذج).</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>مشابه لـ System Prompting، لكن هنا قد تطلب منه أن يكون "شكسبير" ليجيب عن مسرحياته، أو "مواطن روماني قديم" ليصف الحياة اليومية.</p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="example-block border-pink-500">
+                             <h4 class="text-lg font-semibold text-pink-700 mb-2">مثال (أدب):</h4>
+                            <pre><strong>الموجه:</strong>
+بصفتك شخصية "عطيل" من مسرحية شكسبير، صف مشاعرك تجاه "ياغو" في منتصف المسرحية.</pre>
+                             <p class="text-slate-600 text-sm mt-2 italic"><strong>الناتج المتوقع:</strong> رد بأسلوب يحاكي لغة عطيل (أو من منظوره) يصف مشاعره.</p>
+                        </div>
+                         <div class="example-block border-pink-500">
+                            <h4 class="text-lg font-semibold text-pink-700 mb-2">مثال (تاريخ - محاكاة):</h4>
+                            <pre><strong>الموجه:</strong>
+"أنت الآن قائد عسكري في معركة القادسية. صف التحديات التي تواجهها قبل بدء المعركة."</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لإنشاء حوارات أو سيناريوهات تفاعلية بين شخصيات.</li>
+                            <li>لجعل تعلم التاريخ أو الأدب أكثر جاذبية.</li>
+                            <li>لتوليد محتوى من منظور معين (مثل: "اكتب عن الثورة الصناعية من وجهة نظر عامل").</li>
+                            <li>لتطوير ألعاب تعليمية أو أنشطة قائمة على الأدوار.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-role-example-arabic-teacher" aria-labelledby="slide-role-example-arabic-teacher-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-role-example-arabic-teacher-title" class="text-fuchsia-600">مثال تطبيقي لـ Role Prompting (مدرس لغة عربية)</h2>
+                    <div class="mb-6">
+                        <h3>الهدف:</h3>
+                        <p>شرح معنى بيت شعر وتوضيح جمال بسيط فيه لطلاب المرحلة الثانوية.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الموجه (Prompt):</h3>
+                        <div class="example-block border-fuchsia-500">
+                            <pre>تصرف بصفتك **مدرس لغة عربية للمرحلة الثانوية**. اشرح ببساطة المعنى العام للبيت التالي لامرئ القيس، ووضح الصورة التي يرسمها الشاعر:
+
+"قِفَا نَبْكِ مِنْ ذِكْرَى حَبِيبٍ ومَنْزِلِ    بِسِقْطِ اللِّوَى بَيْنَ الدَّخُولِ فَحَوْمَلِ"</pre>
+                        </div>
+                    </div>
+                    <div class="explanation-block">
+                        <h3>لماذا هذا "تلقين الدور"؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>الدور "<strong>مدرس لغة عربية للمرحلة الثانوية</strong>" يجعل النموذج يركز على شرح المعنى العام والصورة الشعرية بطريقة يفهمها الطالب.</li>
+                            <li>يتجنب التحليل البلاغي المعمق ويركز على توصيل الفكرة الرئيسية.</li>
+                            <li>يتم تكييف استجابة النموذج من حيث مستوى التعقيد والأسلوب ليناسب الجمهور المستهدف.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-step-back" aria-labelledby="slide-step-back-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-step-back-title" class="text-teal-500">Step-back Prompting (التلقين بالخطوة للخلف)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>قبل طلب حل مشكلة معقدة، تطلب من النموذج التفكير في مبدأ عام أو سؤال أوسع، ثم تستخدم إجابته كمدخل للموجه التفصيلي.</p>
+                    </div>
+                     <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك قبل أن تطلب من الطالب تصميم تجربة علمية معقدة، تسأله أولاً: "ما المبادئ الأساسية لتصميم التجارب؟" ثم تطلب منه تصميم التجربة المحددة.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (علوم - تصميم تجربة):</h3>
+                        <div class="example-block border-teal-500">
+                            <div class="step-back-block">
+                                <p><strong>الموجه الأول (الخطوة للخلف):</strong> "ما العوامل الرئيسية التي تؤثر على نمو النباتات بشكل عام؟"</p>
+                            </div>
+                            <div class="my-3 p-3 bg-slate-100 rounded text-slate-600 italic border border-slate-200">
+                                <p><strong>إجابة النموذج (مختصرة):</strong> الضوء، الماء، نوع التربة، درجة الحرارة.</p>
+                            </div>
+                            <hr class="my-4 border-slate-300">
+                            <pre><strong>الموجه الثاني (المهمة التفصيلية):</strong>
+بناءً على أن العوامل المؤثرة هي الضوء، الماء، التربة، والحرارة، صمم تجربة بسيطة لاختبار تأثير كمية الماء المختلفة على نمو نبات الفاصوليا. اذكر الخطوات والمواد.</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>للمهام التي تتطلب تفكيرًا نقديًا أو حل مشكلات معقدة.</li>
+                            <li>لمساعدة الطلاب (والنموذج) على بناء فهم تدريجي.</li>
+                            <li>لتوليد حلول أو تصميمات أكثر شمولاً ودقة.</li>
+                            <li>لتفكيك المشكلات الكبيرة إلى أجزاء أصغر.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-step-back-examples" aria-labelledby="slide-step-back-examples-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-step-back-examples-title" class="text-cyan-500">أمثلة إضافية لـ Step-back Prompting</h2>
+                    <div class="sub-example-block">
+                        <h4>مثال 1: اللغة العربية</h4>
+                        <p><strong>المطالبة التقليدية:</strong> اشرح كيف تطورت قصيدة المدح في العصر العباسي.</p>
+                        <p><strong>مطالبة Step-back:</strong></p>
+                        <div class="step-block"><p><strong>الخطوة 1:</strong> ما الأغراض الشعرية الرئيسية في الشعر العربي الكلاسيكي، وما خصائصها؟</p></div>
+                        <div class="step-block mt-2"><p><strong>الخطوة 2:</strong> كيف حافظ شعراء العصر العباسي على تقاليد المدح وطوروها، وما التأثيرات التي شكلت هذا التطور؟</p></div>
+                    </div>
+                    <div class="sub-example-block">
+                        <h4>مثال 2: الدراسات الاجتماعية</h4>
+                        <p><strong>المطالبة التقليدية:</strong> حلل أسباب ثورة 1919 في مصر.</p>
+                        <p><strong>مطالبة Step-back:</strong></p>
+                        <div class="step-block"><p><strong>الخطوة 1:</strong> ما الحركات الاجتماعية والسياسية التي ظهرت في مصر أواخر القرن الـ19 وأوائل الـ20؟</p></div>
+                        <div class="step-block mt-2"><p><strong>الخطوة 2:</strong> كيف ساهمت هذه الحركات في اندلاع ثورة 1919، وما العوامل المؤثرة؟</p></div>
+                    </div>
+                     <div class="sub-example-block">
+                        <h4>مثال 3: الفلسفة</h4>
+                        <p><strong>المطالبة التقليدية:</strong> اشرح نظرية المعرفة عند أفلاطون.</p>
+                        <p><strong>مطالبة Step-back:</strong></p>
+                        <div class="step-block"><p><strong>الخطوة 1:</strong> ما الأسئلة الأساسية التي تناولها الفلاسفة اليونانيون القدماء حول طبيعة المعرفة والحقيقة؟</p></div>
+                        <div class="step-block mt-2"><p><strong>الخطوة 2 (افتراضية):</strong> بناءً على هذه الأسئلة، كيف حاول أفلاطون الإجابة عليها من خلال نظريته عن المُثُل والمعرفة العقلية مقابل الحسية؟</p></div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-cot" aria-labelledby="slide-cot-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-cot-title" class="text-indigo-500">Chain of Thought (CoT) (سلسلة الأفكار)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تشجيع النموذج على "التفكير بصوت عالٍ" أو توضيح خطوات الاستدلال التي يتبعها للوصول إلى الإجابة، بدلاً من إعطاء الإجابة النهائية مباشرة. يحسن قدرة النموذج على حل المشكلات متعددة الخطوات.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تطلب من الطالب ليس فقط إعطاء الناتج النهائي لمسألة رياضية، بل أن يكتب <strong>كل خطوة قام بها</strong> للوصول إلى هذا الناتج. هذا يساعد على فهم طريقة تفكيره.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (رياضيات - مسائل كلامية):</h3>
+                        <div class="example-block">
+                            <pre><strong>الموجه (بدون CoT):</strong> "اشترى أحمد 5 أقلام سعر القلم 3 جنيهات، و 2 كراسة سعر الكراسة 7 جنيهات. كم دفع إجمالاً؟"</pre>
+                        </div>
+                        <div class="example-block border-indigo-500">
+                            <pre><strong>الموجه (مع CoT):</strong> "اشترى أحمد 5 أقلام سعر القلم 3 جنيهات، و 2 كراسة سعر الكراسة 7 جنيهات. كم دفع إجمالاً؟ <strong>فكر خطوة بخطوة.</strong>"</pre>
+                        </div>
+                        <div class="example-block border-green-500 bg-green-50">
+                            <p><strong>الناتج المتوقع (مع CoT):</strong></p>
+                            <pre>أولاً، سأحسب تكلفة الأقلام: 5 أقلام * 3 جنيهات/قلم = 15 جنيهًا.
+ثانيًا، سأحسب تكلفة الكراسات: 2 كراسة * 7 جنيهات/كراسة = 14 جنيهًا.
+ثالثًا، سأجمع التكلفتين: 15 جنيهًا + 14 جنيهًا = 29 جنيهًا.
+إذن، دفع أحمد إجمالاً 29 جنيهًا.</pre>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لإنشاء أمثلة محلولة خطوة بخطوة (رياضيات، فيزياء).</li>
+                            <li>لتوضيح عملية التفكير المنطقي للطلاب.</li>
+                            <li>لتوليد شروحات مفصلة لكيفية عمل مفهوم معين.</li>
+                            <li>لتقييم فهم العملية وليس فقط النتيجة.</li>
+                        </ul>
+                    </div>
+                    <div class="note-block">
+                        <p><strong>ملاحظة:</strong> يمكن دمج CoT مع Few-shot prompting (إعطاء أمثلة توضح سلسلة التفكير) لنتائج أفضل. يُفضل ضبط درجة الحرارة (Temperature) على 0 عند استخدام CoT لضمان أن سلسلة التفكير تكون الأكثر منطقية.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-self-consistency" aria-labelledby="slide-self-consistency-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-self-consistency-title" class="text-purple-500">Self-consistency (الاتساق الذاتي)</h2>
+                     <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تقنية مبنية على CoT. تشغيل نفس الموجه (الذي يطلب سلسلة أفكار) عدة مرات (بدرجة حرارة أعلى قليلاً لتنويع مسارات التفكير). ثم، اختيار الإجابة النهائية الأكثر تكرارًا.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>تخيل أنك أعطيت نفس المسألة الصعبة لمجموعة طلاب أذكياء. كل طالب قد يحلها بطريقة مختلفة. تنظر للإجابات النهائية، والإجابة التي اتفق عليها معظمهم هي غالبًا الصحيحة.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (منطق - تقييم حجة):</h3>
+                        <div class="example-block border-purple-500">
+                            <pre><strong>الموجه (يُرسل للنموذج 3 مرات مثلاً مع درجة حرارة 0.5):</strong> "حلل الحجة التالية وحدد صحتها من عدمها، مع شرح خطوات تفكيرك: [نص الحجة]. ما النتيجة النهائية (صحيحة/مغلوطة)؟"</pre>
+                        </div>
+                        <div class="example-block border-purple-500 bg-purple-50">
+                            <p><strong>النتائج المحتملة:</strong></p>
+                            <ul class="list-disc pr-5 space-y-1">
+                                <li>المحاولة 1: خطوات تفكير تؤدي إلى "صحيحة".</li>
+                                <li>المحاولة 2: خطوات تفكير مختلفة تؤدي إلى "صحيحة".</li>
+                                <li>المحاولة 3: خطوات تفكير أخرى تؤدي إلى "مغلوطة".</li>
+                            </ul>
+                            <p class="mt-2"><strong>الاختيار النهائي (بالاتساق الذاتي):</strong> "صحيحة" (لأنها تكررت مرتين).</p>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>للحصول على إجابات أكثر موثوقية للمشكلات المعقدة.</li>
+                            <li>عند تقييم صحة الحجج أو الاستنتاجات في مواد التفكير النقدي.</li>
+                            <li>لتوليد إجابات نموذجية لمسائل تتطلب استدلالاً عميقًا.</li>
+                        </ul>
+                    </div>
+                    <div class="note-block">
+                        <p><strong>ملاحظة:</strong> هذه التقنية أكثر تكلفة حسابيًا (لتشغيل النموذج عدة مرات)، لكنها تحسن الدقة.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-tot" aria-labelledby="slide-tot-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-tot-title" class="text-green-500">Tree of Thoughts (ToT) (شجرة الأفكار)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تعميم لمفهوم CoT. بدلاً من مسار تفكير خطي واحد، يسمح للنموذج باستكشاف <strong>عدة مسارات تفكير مختلفة في نفس الوقت</strong> (كفروع شجرة)، وتقييمها واختيار الواعدة منها.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>تخيل مشكلة تصميمية معقدة (تصميم منهج مبتكر). تستكشف عدة أفكار أولية (فروع). كل فكرة قد تتفرع. تقيّم كل فرع، تتخلى عن غير المجدي وتركز على الواعد.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (ريادة أعمال - خطة مشروع):</h3>
+                        <div class="example-block border-green-500">
+                            <pre><strong>الموجه (مبسط لفكرة ToT):</strong> "نريد إطلاق مشروع طلابي لبيع منتجات صديقة للبيئة. استكشف 3 أفكار رئيسية للمنتجات. لكل فكرة، فكر في ميزتين وتحدي واحد. ثم، قيّم أي الأفكار تبدو الأكثر جدوى ولماذا."</pre>
+                        </div>
+                        <div class="example-block border-green-500 bg-green-50">
+                            <p><strong>الناتج المتوقع:</strong> النموذج يقدم 3 مسارات أولية (أفكار منتجات). لكل مسار، تفاصيل (ميزات وتحديات). ثم يقوم بتقييم لاختيار الأفضل.</p>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لمهام التخطيط المعقدة (تصميم وحدات دراسية، خطط مشاريع).</li>
+                            <li>لحل المشكلات ذات الحلول المتعددة المحتملة والتي تتطلب استكشافًا وتقييمًا.</li>
+                            <li>لتوليد استراتيجيات أو سيناريوهات مختلفة.</li>
+                            <li>لتشجيع التفكير الإبداعي والنقدي العميق.</li>
+                        </ul>
+                    </div>
+                    <div class="note-block">
+                        <p><strong>ملاحظة:</strong> ToT تقنية متقدمة جدًا وتتطلب عادةً برمجة أكثر تعقيدًا لتطبيقها بشكل كامل.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-react" aria-labelledby="slide-react-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-react-title" class="text-red-500">ReAct (Reason & Act) (الاستدلال والفعل)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>تمكين النموذج من التفاعل مع <strong>أدوات خارجية</strong> (محرك بحث، آلة حاسبة) لحل المهام. النموذج يقوم بـ:
+                        <br><strong>Reason (الاستدلال):</strong> يفكر في الخطوة التالية أو المعلومة التي يحتاجها.
+                        <br><strong>Act (الفعل):</strong> يقرر استخدام أداة معينة (مثلاً: "سأبحث في جوجل عن...").
+                        <br><strong>Observe (الملاحظة):</strong> يرى نتيجة استخدام الأداة. يكرر العملية.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>تخيل مشروعًا بحثيًا لطالب. الطالب سـ: يفكر ("أحتاج تاريخ هذا الحدث.")، يتصرف (يستخدم الإنترنت/المكتبة)، يلاحظ (يقرأ المعلومات)، ثم يفكر بناءً عليها، وهكذا.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (علوم - ورقة حقائق):</h3>
+                        <div class="example-block border-red-500">
+                            <pre><strong>الموجه (يتضمن أداة بحث افتراضية):</strong> "أنت مساعد بحثي مكلف بإعداد ورقة حقائق عن 'الباندا العملاقة'. استخدم [SearchTool] للعثور على موطنه، غذائه، وحالة الحفظ. قدم ملخصًا. اذكر خطوات تفكيرك وأفعالك."</pre>
+                        </div>
+                        <div class="example-block border-red-500 bg-red-50">
+                            <p><strong>الناتج المتوقع (سلوك النموذج الداخلي):</strong></p>
+                            <!-- ADDED class="ltr-code" for this specific <pre> block -->
+                            <pre class="ltr-code">Thought: أحتاج لمعرفة موطن الباندا.
+Action: [SearchTool("موطن الباندا العملاقة")]
+Observation: (نتائج البحث: جبال وسط الصين)
+Thought: الآن أحتاج لمعرفة غذائه.
+Action: [SearchTool("غذاء الباندا العملاقة")]
+Observation: (نتائج البحث: الخيزران)
+... وهكذا حتى يجمع المعلومات ويقدم الملخص.</pre>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لتوليد محتوى يعتمد على معلومات حديثة جدًا أو بيانات متغيرة.</li>
+                            <li>لإنشاء أنشطة بحثية موجهة.</li>
+                            <li>لدمج أدوات حسابية أو برمجية في حل المشكلات.</li>
+                            <li>لإنشاء "وكلاء أذكياء" لمهام تعليمية معقدة.</li>
+                        </ul>
+                    </div>
+                     <div class="note-block">
+                        <p><strong>ملاحظة:</strong> تطبيق ReAct يتطلب عادةً تكامل برمجي مع الأدوات الخارجية.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-ape" aria-labelledby="slide-ape-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-ape-title" class="text-sky-600">Automatic Prompt Engineering (APE)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>بدلاً من صياغة الموجهات يدويًا، استخدام <strong>نموذج لغوي آخر لتوليد واقتراح موجهات مرشحة</strong> لمهمة معينة. ثم يتم تقييم هذه الموجهات لاختيار الأفضل.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>تخيل أنك تريد أفضل سؤال لتقييم فهم الطلاب لمفهوم ما. بدلاً من التفكير بنفسك، تطلب من "مساعد خبير في صياغة الأسئلة" (نموذج لغوي آخر) أن يقترح 10 صيغ. ثم تختار الأفضل.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>مثال (توليد أسئلة مراجعة):</h3>
+                        <div class="example-block border-sky-500">
+                            <pre><strong>الموجه (للنموذج الذي يقوم بـ APE):</strong> "لدينا فصل عن 'النظام الشمسي' للصف الخامس. قم بتوليد 10 موجهات (أسئلة) متنوعة لتقييم فهم الطلاب. يجب أن تغطي الكواكب، الشمس، والأقمار. اجعل بعضها مباشر وبعضها يتطلب تفكيرًا."</pre>
+                        </div>
+                        <div class="example-block border-sky-500 bg-sky-50">
+                             <p><strong>الناتج المتوقع:</strong> قائمة بـ 10 أسئلة مرشحة مثل: "ما أكبر كوكب في نظامنا الشمسي؟"، "لماذا كوكب الأرض فريد؟"</p>
+                             <p class="mt-2"><strong>الخطوة التالية:</strong> تقوم أنت بتقييم هذه الأسئلة واختيار الأنسب.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لتوسيع نطاق الأسئلة أو الأنشطة حول موضوع معين.</li>
+                            <li>للحصول على أفكار لصيغ مختلفة لموجهات قد لا تكون فكرت بها.</li>
+                            <li>لتسريع عملية إنشاء عدد كبير من الموجهات الأولية (مثل بنك أسئلة).</li>
+                            <li>لاستكشاف طرق مختلفة لتوجيه النموذج لتحقيق نفس الهدف.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-code-prompting" aria-labelledby="slide-code-prompting-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-code-prompting-title" class="text-slate-700">Code Prompting (تلقين الكود)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>استخدام الموجهات لتوجيه النماذج اللغوية لـ <strong>كتابة، شرح، ترجمة، تصحيح، أو مراجعة الكود البرمجي</strong>.</p>
+                    </div>
+                     <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>حتى لو لم تكن مبرمجًا، قد تحتاج لفهم كود بسيط أو إنشاء سكربت صغير. النماذج اللغوية يمكنها المساعدة، أو لإنشاء أمثلة كود بسيطة لشرح مفاهيم برمجية.</p>
+                    </div>
+                    <div class="mb-6">
+                         <h3>الأمثلة:</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="example-block border-slate-500 text-sm"><pre><strong>كتابة كود:</strong> "اكتب سكربت Bash لإعادة تسمية الملفات في مجلد."</pre></div>
+                            <div class="example-block border-slate-500 text-sm"><pre><strong>شرح كود:</strong> "اشرح ماذا يفعل هذا الكود البايثون: [تلصق الكود]."</pre></div>
+                            <div class="example-block border-slate-500 text-sm"><pre><strong>ترجمة كود:</strong> "ترجم هذا الكود من Bash إلى Python."</pre></div>
+                            <div class="example-block border-slate-500 text-sm"><pre><strong>تصحيح كود:</strong> "هذا الكود البايثون به خطأ، ساعدني في إيجاده: [تلصق الكود والخطأ]."</pre></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>إذا كنت تطور مواد تعليمية في البرمجة: لتوليد أمثلة، شروحات، تمارين.</li>
+                            <li>لأتمتة مهام صغيرة متعلقة بتطوير المحتوى.</li>
+                            <li>لفهم أكواد بسيطة قد تصادفها.</li>
+                            <li>لإنشاء أدوات تفاعلية بسيطة لطلابك.</li>
+                        </ul>
+                    </div>
+                </div>
+            </article>
+
+            <article class="slide" id="slide-multimodal" aria-labelledby="slide-multimodal-title">
+                <div class="slide-content w-full">
+                    <h2 id="slide-multimodal-title" class="text-orange-500">Multimodal Prompting (التلقين متعدد الوسائط)</h2>
+                    <div class="mb-6">
+                        <h3>الفكرة الأساسية:</h3>
+                        <p>استخدام <strong>تنسيقات إدخال متعددة</strong> (ليس فقط نصًا) لتوجيه النموذج. يمكن أن يشمل <strong>صورًا، صوتًا، كودًا</strong>، بالإضافة إلى النص. يعتمد على قدرات النموذج.</p>
+                    </div>
+                    <div class="mb-6">
+                        <h3>الشرح لمطور المواد التعليمية:</h3>
+                        <p>كأنك تعرض على الطالب صورة لخريطة (وسيط بصري) ثم تسأله سؤالاً نصيًا عنها. أو تعرض له مقطعًا صوتيًا (وسيط سمعي) وتطلب منه تلخيصه.</p>
+                    </div>
+                     <div class="grid md:grid-cols-2 gap-6 mb-6">
+                        <div class="example-block border-orange-500">
+                             <h4 class="text-lg font-semibold text-orange-700 mb-2">مثال (جغرافيا - صور أقمار):</h4>
+                            <pre><strong>الموجه:</strong> (صورة قمر صناعي لمنطقة زراعية) + "النص: هذه صورة لمنطقة زراعية. بناءً على الأنماط، هل تعاني من الجفاف؟ اشرح."</pre>
+                            <p class="text-slate-600 text-sm mt-2 italic"><strong>الناتج المتوقع:</strong> النموذج يحلل الصورة ويربطها بالسؤال ليقدم إجابة.</p>
+                        </div>
+                         <div class="example-block border-orange-500">
+                            <h4 class="text-lg font-semibold text-orange-700 mb-2">مثال (لغات - فهم محادثة):</h4>
+                            <pre><strong>الموجه:</strong> (ملف صوتي لمحادثة) + "النص: ما الموضوع الرئيسي لهذه المحادثة؟ ومن المتحدثون المحتملون؟"</pre>
+                        </div>
+                    </div>
+                    <div class="mb-6">
+                        <h3>متى تستخدمه؟</h3>
+                        <ul class="list-disc space-y-1 pr-5">
+                            <li>لإنشاء مواد تعليمية أكثر تفاعلية وجاذبية.</li>
+                            <li>لتقييم فهم الطلاب للمعلومات المقدمة بأشكال مختلفة.</li>
+                            <li>لتطوير أنشطة تتطلب تحليل الصور، الرسوم البيانية، أو مقاطع الفيديو.</li>
+                            <li>لإنشاء محتوى لأنماط التعلم المختلفة.</li>
+                        </ul>
+                    </div>
+                    <div class="note-block">
+                        <p><strong>ملاحظة:</strong> هذه التقنية تعتمد بشدة على قدرات النموذج اللغوي (هل هو متعدد الوسائط أم نصي فقط).</p>
+                    </div>
+                </div>
+            </article>
+            </div>
+
+        <nav id="navigation-bar" class="flex justify-between items-center p-4" aria-label="شريط التنقل السفلي">
+            <button id="prevBtn" type="button" class="nav-button" disabled>السابق</button>
+            <div class="text-sm text-slate-600 font-medium" aria-live="polite">
+                الشريحة <span id="current-slide-number">1</span> من <span id="total-slides-number">20</span>
+            </div>
+            <button id="nextBtn" type="button" class="nav-button">التالي</button>
+        </nav>
+    </main>
+
+    <script>
+        // --- الحالة العامة ---
+        let currentSlideIndex = 0;
+        let slidesNodeList;
+        let totalSlidesCount = 0;
+        let dropdownLinks = []; 
+
+        // --- عناصر الواجهة ---
+        const presentationContainer = document.getElementById('presentation-container');
+        const prevButton = document.getElementById('prevBtn');
+        const nextButton = document.getElementById('nextBtn');
+        const currentSlideNumberDisplay = document.getElementById('current-slide-number');
+        const totalSlidesNumberDisplay = document.getElementById('total-slides-number');
+        const errorBox = document.getElementById('custom-error-box');
+        const errorMessageElement = document.getElementById('custom-error-message');
+        const slidesWrapper = document.getElementById('slides-wrapper');
+        const homeBtn = document.getElementById('homeBtn');
+        const dropdownNavToggle = document.getElementById('dropdown-nav-toggle');
+        const dropdownNavMenu = document.getElementById('dropdown-nav-menu');
+        const dropdownNavContainer = document.getElementById('dropdown-nav-container');
+
+        // --- دوال المساعدة ---
+        function showCustomError(message, duration = 4000) {
+            if (!errorMessageElement || !errorBox) {
+                console.error("Error display elements not found:", message);
+                return;
+            }
+            errorMessageElement.textContent = message;
+            errorBox.style.display = 'block';
+            errorBox.setAttribute('aria-hidden', 'false');
+
+            if (errorBox.timeoutId) clearTimeout(errorBox.timeoutId);
+            errorBox.timeoutId = setTimeout(() => {
+                errorBox.style.display = 'none';
+                errorBox.setAttribute('aria-hidden', 'true');
+            }, duration);
+        }
+
+        function getSlideIndexById(slideId) {
+            if (!slidesNodeList) return -1;
+            for (let i = 0; i < slidesNodeList.length; i++) {
+                if (slidesNodeList[i].id === slideId) return i;
+            }
+            return -1;
+        }
+
+        function getSlideTitle(slide, index) {
+            const slideTitleElement = slide.querySelector('h2[id$="-title"], h1[id$="-title"]'); 
+            let title = slide.id ? `شريحة: ${slide.id}` : `شريحة ${index + 1}`;
+            if (slideTitleElement) {
+                let tempTitle = slideTitleElement.textContent.trim().split('\n')[0];
+                tempTitle = tempTitle.replace(/\s*\(.*?\)\s*/g, ' ').trim(); 
+                if (tempTitle) title = tempTitle;
+            }
+            return title;
+        }
+        
+        // --- دوال التحكم الرئيسية ---
+        function updateTopNavigationVisibility() {
+            if (!homeBtn || !dropdownNavToggle || !presentationContainer) return;
+            const isVisible = totalSlidesCount > 0;
+            homeBtn.classList.toggle('hidden', currentSlideIndex === 0 || !isVisible);
+            dropdownNavToggle.parentElement.classList.toggle('hidden', !isVisible); 
+        }
+        
+        function updateActiveDropdownLink() {
+            dropdownLinks.forEach(link => {
+                if (parseInt(link.dataset.targetSlideIndex) === currentSlideIndex) {
+                    link.setAttribute('aria-current', 'true');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            });
+        }
+
+        function populateDropdownMenu() {
+            if (!dropdownNavMenu || !slidesNodeList) return;
+            dropdownNavMenu.innerHTML = '';
+            dropdownLinks = []; 
+
+            let itemsAdded = 0;
+            const mainIndexLinks = document.querySelectorAll('#slide1 .prompt-list .prompt-link');
+
+            if (mainIndexLinks.length > 0) {
+                mainIndexLinks.forEach(link => {
+                    const targetSlideId = link.dataset.targetSlideId;
+                    const targetIndex = getSlideIndexById(targetSlideId);
+                    if (targetIndex !== -1) {
+                        const listItem = document.createElement('a');
+                        listItem.href = '#';
+                        listItem.className = 'block px-4 py-2 text-sm text-slate-700 hover:bg-blue-500 hover:text-white transition-colors truncate';
+                        listItem.textContent = link.textContent.trim();
+                        listItem.title = link.textContent.trim();
+                        listItem.dataset.targetSlideIndex = targetIndex;
+                        listItem.setAttribute('role', 'menuitem');
+                        listItem.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            showSlide(targetIndex);
+                            dropdownNavMenu.classList.add('hidden');
+                            dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                        });
+                        dropdownNavMenu.appendChild(listItem);
+                        dropdownLinks.push(listItem);
+                        itemsAdded++;
+                    }
+                });
+            }
+
+            if (itemsAdded === 0 && totalSlidesCount > 0) { 
+                slidesNodeList.forEach((slide, index) => {
+                    const slideTitle = getSlideTitle(slide, index);
+                    const listItem = document.createElement('a');
+                    listItem.href = '#';
+                    listItem.className = 'block px-4 py-2 text-sm text-slate-700 hover:bg-blue-500 hover:text-white transition-colors truncate';
+                    listItem.textContent = slideTitle;
+                    listItem.title = slideTitle;
+                    listItem.dataset.targetSlideIndex = index;
+                    listItem.setAttribute('role', 'menuitem');
+                    listItem.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showSlide(index);
+                        dropdownNavMenu.classList.add('hidden');
+                        dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                    });
+                    dropdownNavMenu.appendChild(listItem);
+                    dropdownLinks.push(listItem);
+                });
+            }
+            updateTopNavigationVisibility();
+            updateActiveDropdownLink();
+        }
+
+        function showSlide(index) {
+            if (totalSlidesCount === 0) {
+                if (slidesWrapper) {
+                    slidesWrapper.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-slate-500 p-10" role="status">
+                                                 <svg class="w-24 h-24 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM7 16h10"></path></svg>
+                                                 <p class="text-xl font-semibold">لا توجد شرائح لعرضها حالياً.</p>
+                                                 <p>قم بإضافة شرائح HTML بالصنف '.slide' داخل '#slides-wrapper'.</p>
+                                             </div>`;
+                }
+                showCustomError("لا توجد شرائح لعرضها. يرجى إضافة محتوى شرائح HTML.");
+            } else {
+                slidesNodeList.forEach(slide => slide.classList.remove('active'));
+                currentSlideIndex = Math.max(0, Math.min(index, totalSlidesCount - 1));
+                slidesNodeList[currentSlideIndex].classList.add('active');
+                slidesNodeList[currentSlideIndex].focus(); 
+            }
+
+            if (slidesWrapper) slidesWrapper.scrollTop = 0;
+
+            updateNavigationButtonsState();
+            updateSlideCounterDisplay();
+            updateTopNavigationVisibility();
+            updateActiveDropdownLink();
+        }
+
+        function updateNavigationButtonsState() {
+            if (!prevButton || !nextButton) return;
+            prevButton.disabled = (currentSlideIndex === 0 || totalSlidesCount === 0);
+            nextButton.disabled = (currentSlideIndex === totalSlidesCount - 1 || totalSlidesCount === 0);
+        }
+
+        function updateSlideCounterDisplay() {
+            if (!currentSlideNumberDisplay || !totalSlidesNumberDisplay) return;
+            if (totalSlidesCount > 0) {
+                currentSlideNumberDisplay.textContent = currentSlideIndex + 1;
+                totalSlidesNumberDisplay.textContent = totalSlidesCount;
+            } else {
+                currentSlideNumberDisplay.textContent = '0';
+                totalSlidesNumberDisplay.textContent = '0';
+            }
+        }
+
+        function changeSlide(direction) {
+            const newSlideIndex = currentSlideIndex + direction;
+            if (newSlideIndex >= 0 && newSlideIndex < totalSlidesCount) {
+                showSlide(newSlideIndex);
+            }
+        }
+
+        function initializePresentation() {
+            slidesNodeList = document.querySelectorAll('#slides-wrapper > .slide'); 
+            totalSlidesCount = slidesNodeList.length;
+
+            slidesNodeList.forEach((slide, index) => {
+                slide.setAttribute('tabindex', '-1'); 
+                const titleElement = slide.querySelector('h1[id$="-title"], h2[id$="-title"]');
+                if (titleElement) {
+                    slide.setAttribute('aria-labelledby', titleElement.id);
+                } else {
+                    const genericTitleId = `slide-${index+1}-generic-title`;
+                    let hElement = slide.querySelector('h1, h2');
+                    if(hElement && !hElement.id) hElement.id = genericTitleId;
+                    if(hElement) slide.setAttribute('aria-labelledby', hElement.id);
+                }
+            });
+
+            populateDropdownMenu();
+            showSlide(0); 
+
+            if (prevButton) prevButton.addEventListener('click', () => changeSlide(-1));
+            if (nextButton) nextButton.addEventListener('click', () => changeSlide(1));
+
+            if (homeBtn) {
+                homeBtn.addEventListener('click', () => {
+                    showSlide(0);
+                    if (dropdownNavMenu) {
+                        dropdownNavMenu.classList.add('hidden');
+                        dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
+            if (dropdownNavToggle && dropdownNavMenu) {
+                dropdownNavToggle.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const isExpanded = dropdownNavMenu.classList.toggle('hidden');
+                    dropdownNavToggle.setAttribute('aria-expanded', String(!isExpanded));
+                    if (!isExpanded) dropdownNavMenu.querySelector('a[role="menuitem"]')?.focus(); 
+                });
+            }
+
+            document.addEventListener('click', (event) => {
+                if (dropdownNavContainer && !dropdownNavContainer.contains(event.target) &&
+                    dropdownNavMenu && !dropdownNavMenu.classList.contains('hidden')) {
+                    dropdownNavMenu.classList.add('hidden');
+                    dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            const mainPagePromptLinks = document.querySelectorAll('#slide1 .prompt-list .prompt-link');
+            mainPagePromptLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const targetSlideId = this.dataset.targetSlideId;
+                    const targetIndex = getSlideIndexById(targetSlideId);
+
+                    if (targetIndex !== -1) {
+                        showSlide(targetIndex);
+                    } else {
+                        const linkText = this.textContent || "العنصر المحدد";
+                        showCustomError(`الشريحة المستهدفة '${linkText}' (ID: ${targetSlideId}) غير موجودة.`);
+                    }
+                });
+            });
+
+            document.addEventListener('keydown', handleKeyboardNavigation);
+        }
+
+        function handleKeyboardNavigation(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable) return;
+
+            let captured = false;
+            if (dropdownNavMenu && !dropdownNavMenu.classList.contains('hidden')) {
+                const items = Array.from(dropdownNavMenu.querySelectorAll('a[role="menuitem"]'));
+                const activeElement = document.activeElement;
+                let currentIndex = items.indexOf(activeElement);
+
+                if (event.key === 'ArrowDown') {
+                    currentIndex = (currentIndex + 1) % items.length;
+                    items[currentIndex]?.focus();
+                    captured = true;
+                } else if (event.key === 'ArrowUp') {
+                    currentIndex = (currentIndex - 1 + items.length) % items.length;
+                    items[currentIndex]?.focus();
+                    captured = true;
+                } else if (event.key === 'Escape') {
+                    dropdownNavMenu.classList.add('hidden');
+                    dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                    dropdownNavToggle.focus();
+                    captured = true;
+                } else if (event.key === 'Tab') {
+                     dropdownNavMenu.classList.add('hidden');
+                     dropdownNavToggle.setAttribute('aria-expanded', 'false');
+                }
+            } else {
+                if (event.key === 'ArrowRight' || event.key === 'PageDown' || (event.key === ' ' && nextButton && !nextButton.disabled)) {
+                    if (nextButton && !nextButton.disabled) changeSlide(1);
+                    captured = true;
+                } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+                    if (prevButton && !prevButton.disabled) changeSlide(-1);
+                    captured = true;
+                } else if (event.key === 'Home') {
+                    showSlide(0);
+                    captured = true;
+                } else if (event.key === 'End') {
+                    if (totalSlidesCount > 0) showSlide(totalSlidesCount - 1);
+                    captured = true;
+                }
+            }
+            if (captured) event.preventDefault();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePresentation);
+        } else {
+            initializePresentation();
+        }
+    </script>
+</body>
+</html>
